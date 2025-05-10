@@ -1,0 +1,168 @@
+  3               ! How many atoms to delete. If > 0, one line below to specify ID of atoms to be deleted   
+  1  2  3         ! Id of atoms to be deleted
+1                 ! How many atoms define the sphere center. If > 1, then middle point of coordinates
+  1               ! Id of atoms defining the sphere center   
+2                 ! How many atoms define the z-axis. If > 1, then middle point of coordinates
+  2  3            ! Id of atoms for z-axis 
+1                 ! How many atoms define the xz-plane. If > 1, then middle point of coordinates
+  2               ! Id of atoms for xz-plane 
+   -4.0           ! Sphere radius.  If negative, consider a cube instead of a sphere.
+0.0               ! Displacement from sphere center 
+    0.10              ! Mesh size
+1                 ! 0/1 = Consider/do not consider H atoms from Vbur calculation. 
+1                 ! 0/1 = molecule oriented along negative/positive Z-axis
+1                 ! 0/1 = Do not write/write files for top and bottom surfaces
+103	          ! number of radii to be read in the following, then radii. All radii are uppercase.
+H       1.28
+HE      1.64
+LI      2.13
+BE      1.79
+B       2.25
+C       1.99
+N       1.81
+O       1.78
+F       1.72
+NE      1.80
+NA      2.66
+MG      2.02
+AL      2.15
+SI      2.46
+P       2.11
+S       2.11
+CL      2.05
+AR      2.20
+K       3.22
+CA      2.70
+SC      2.52
+TI      2.47
+V       2.42
+CR      2.41
+MN      2.40
+FE      2.39
+CO      2.34
+NI      1.91
+CU      1.64
+ZN      1.63
+GA      2.19
+GE      2.47
+AS      2.16
+SE      2.22
+BR      2.16
+KR      2.36
+RB      3.55
+SR      2.91
+Y       2.71
+ZR      2.61
+NB      2.55
+MO      2.54
+TC      2.53
+RU      2.49
+RH      2.46
+PD      1.91
+AG      2.01
+CD      1.85
+IN      2.26
+SN      2.54
+SB      2.41
+TE      2.41
+I       2.32
+XE      2.53
+CS      4.01
+BA      3.14
+LA      2.84
+CE      2.83
+PR      2.81
+ND      2.80
+PM      2.78
+SM      2.76
+EU      2.75
+GD      2.74
+TB      2.73
+DY      2.70
+HO      2.69
+ER      2.68
+TM      2.66
+YB      2.64
+LU      2.62
+HF      2.61
+TA      2.60
+W       2.55
+RE      2.53
+OS      2.53
+IR      2.49
+PT      2.01
+AU      1.94
+HG      1.81
+TL      2.29
+PB      2.36
+BI      2.42
+PO      2.30
+AT      2.36
+RN      2.57
+FR      4.07
+RA      3.31
+AC      2.89
+TH      2.87
+PA      2.84
+U       2.18
+NP      2.80
+PU      2.84
+AM      2.85
+CM      2.87
+BK      2.85
+CF      2.87
+ES      2.87
+FM      2.87
+M       2.88
+NO      2.88
+LR      2.88
+         48
+SI-0068-C2V                            
+ZR      0.00000   0.00000   0.00000
+C       1.76272   0.00000   1.40682
+C      -1.76272   0.00000   1.40682
+C      -0.00000   1.40024  -2.09325
+C      -1.15625   1.79226  -1.33756
+C      -0.72616   2.53740  -0.18681
+C       0.72616   2.53740  -0.18681
+C       1.15625   1.79226  -1.33756
+C       0.00000  -1.40024  -2.09325
+C      -1.15625  -1.79226  -1.33756
+C      -0.72616  -2.53740  -0.18681
+C       0.72616  -2.53740  -0.18681
+C       1.15625  -1.79226  -1.33756
+SI     -0.00000   0.00000  -3.36574
+C       1.58846   0.00000  -4.38748
+C      -1.58846   0.00000  -4.38748
+H       2.19452  -1.59553  -1.61382
+H       2.19452   1.59553  -1.61382
+H      -2.53102  -3.20804   0.85955
+H      -2.53102   3.20804   0.85955
+C      -1.43648  -3.20862   0.85354
+C      -1.43648   3.20862   0.85354
+H      -1.24626  -4.37816   2.64616
+H      -1.24626   4.37816   2.64616
+C      -0.71640  -3.85487   1.84309
+C      -0.71640   3.85487   1.84309
+H       1.24626  -4.37816   2.64616
+H       1.24626   4.37816   2.64616
+C       0.71640  -3.85487   1.84309
+C       0.71640   3.85487   1.84309
+H       2.53102  -3.20804   0.85955
+H       2.53102   3.20804   0.85955
+C       1.43648  -3.20862   0.85354
+C       1.43648   3.20862   0.85354
+H      -2.47324   0.00000  -3.72118
+H      -1.64723  -0.89813  -5.03249
+H      -1.64723   0.89813  -5.03249
+H       1.64723   0.89813  -5.03249
+H       1.64723  -0.89813  -5.03249
+H       2.47324   0.00000  -3.72118
+H      -2.19452   1.59553  -1.61382
+H      -2.19452  -1.59553  -1.61382
+H       2.76561   0.00000   0.93244
+H       1.68490  -0.90251   2.04981
+H       1.68490   0.90252   2.04981
+H      -2.76561   0.00000   0.93244
+H      -1.68490  -0.90251   2.04981
+H      -1.68490   0.90252   2.04981

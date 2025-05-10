@@ -1,0 +1,22 @@
+#!/bin/sh
+
+HOME_DIR=`pwd`
+
+for JOB in cp2zrcl2 nhc nhc-Alone nhc-C210 nhc-Mesh-005 nhc-H-Yes Mn-salen Mn-salen-R1500 Mn-salen-R450 Pd-xantphos-Neg-Z Pd-xantphos-Pos-Z c2v-metallocene c2v-metallocene-cube Metalloprot
+do
+   echo Running $JOB
+   cd $HOME_DIR/$JOB
+   rm $JOB.out
+   ../../sambvca21.x  $JOB 
+   ../../plot_map.py  $JOB-TopSurface.dat 0.2
+   ../../plot_map.py  $JOB-BotSurface.dat 0.2
+done
+
+# Examples below have more than 1 frame to be analyzed, no maps calculation. 
+for JOB in Ti-taddol-3frames 
+do
+   echo Running $JOB
+   cd $HOME_DIR/$JOB
+   rm $JOB.out
+   ../../sambvca21.x  $JOB 
+done

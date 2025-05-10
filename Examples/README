@@ -1,0 +1,19 @@
+
+Examples included in this distributions are:
+
+01.cp2zrcl2               : zirconocene
+02.nhc                    : N-heterocyclic carbene Se complex
+03.nhc-Mesh-005           : N-heterocyclic carbene Se complex, mesh grid 0.05 instead of 0.10 default
+04.nhc-C210               : N-heterocyclic carbene Se complex, carbene C atom fixed at 2.10 from sphere center
+05.nhc-H-Yes              : N-heterocyclic carbene Se complex, H atoms included in the buried volume calculation
+06.Mn-salen               : Mn-salen complex
+07.Mn-salen-R450          : Mn-salen complex, sphere radius increased to 4.5 Angs
+08.Mn-salen-R1500         : Mn-salen complex, sphere radius increased to 15.0 Angs
+09.Pd-xantphos-Pos-Z      : PdCl2-xantphos complex, Cl atoms oriented on the positive Z axis
+10.Pd-xantphos-Neg-Z      : PdCl2-xantphos complex, Cl atoms oriented on the negative Z axis
+11.Ti-taddol-3frames      : Ti-taddol complex, 3 xyz frames included in the input file
+12.C2V-metallocene        : C2V symmetric metallocene, sphere, all quadrants have same %VBur
+13.C2V-metallocene-Cube   : C2V symmetric metallocene, cube analyzed instead of sphere
+14.Metalloprot       : Metalloprotein, radius of the sphere set to 10.0 Angs
+
+to run all the examples :   sh ./runall
