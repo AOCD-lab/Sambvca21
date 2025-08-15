@@ -495,13 +495,18 @@ c Buried volume calculation starts below by setting number
 c of grid points to be sampled on each axis
 c check if grid point is inside the sampled sphere
 c if grid point is on the surface set volume weight = 0.5
+c
+c changed order to x,y scanning to y,x to have data in output
+c surface files matching the order used in ML processing of
+c images
 c=========================================================
         NumPoints = int(2.0 * Radius / BinSize + 1.0)
 
         do i= 1, NumPoints
-          x = -Radius + Real(i-1)*BinSize
+          y = +Radius  - Real(i-1)*BinSize
           do j = 1, NumPoints
-            y = -Radius  + Real(j-1)*BinSize
+            x = -Radius + Real(j-1)*BinSize
+            write(6,*)y,x
             zmin = Radius * 2.0
             zmax =-Radius * 2.0
             do k = 1, NumPoints
