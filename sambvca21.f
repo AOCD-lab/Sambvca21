@@ -15,6 +15,10 @@ c V.; Cavallo, L. SambVca: A Web Application for the Calculation of the   c
 c Buried Volume of c N-Heterocyclic Carbene Ligands                       c
 c Eur. J. Inorg. Chem. 2009, 1759                                         c
 c                                                                         c
+c Falivene, L.; Cao, Z.; Petta, A.; Serra, L.; Poater, A.; Oliva, O.;     c
+c Scarano, V.; Cavallo, L.  Towards the online computer-aided design      c
+c of catalytic pockets et al  Nat. Chem. 2019, 11, 872.                   c
+c                                                                         c
 c For any questions/suggestions regarding this code, please contact       c
 c Prof. Luigi Cavallo : luigi.cavallo@kaust.edu.sa; lcavallo@unisa.it     c
 c                                                                         c
@@ -28,9 +32,6 @@ c the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR     c
 c PURPOSE.  See the c GNU General Public License for more details.        c
 c                                                                         c
 c For the GNU General Public License, see http://www.gnu.org/licenses/    c
-c                                                                         c
-c Work using this software should cite:                                   c
-c Falivene L. et a.. Nat. Chem. 2019, DOI:10.1038/s41557-019-0319-5       c
 c                                                                         c
 c=========================================================================c
 
