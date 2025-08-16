@@ -1,0 +1,245 @@
+#!/usr/bin/python
+import pandas as pd
+import os
+import numpy as np
+from collections import Counter
+import argparse
+
+def symmetrize_c1(df, keep_both=True, missing_value=-8.0, tol=1e-8):
+    """
+    C1 symmetry: leave points unchanged (no averaging). For consistency with c2,
+    keep rounded x,y copies used for labeling/grid ops, but output x,y as the rounded values.
+    """
+    df = df.copy()
+    df['x'] = df['x'].round(4)
+    df['y'] = df['y'].round(4)
+    df_out = df[['x', 'y', 'z']].copy()
+    df_out['status'] = 'original'
+
+    # Sort to match later expectations (y desc, x asc)
+    df_out.sort_values(by=['y', 'x'], ascending=[False, True], inplace=True)
+    df_out.reset_index(drop=True, inplace=True)
+    return df_out
+
+def symmetrize_c2(df, keep_both=True, missing_value=-8.0, tol=1e-8):
+    df = df.copy()
+    df['x_r'] = df['x'].round(4)
+    df['y_r'] = df['y'].round(4)
+    z_map = {(xr, yr): z for xr, yr, z in zip(df['x_r'], df['y_r'], df['z'])}
+    processed = set()
+    rows = []
+
+    for xr, yr, z in zip(df['x_r'], df['y_r'], df['z']):
+        key = (xr, yr)
+        if key in processed:
+            continue
+        sym_key = (-xr, -yr)
+        z1 = z_map.get(key, missing_value)
+        z2 = z_map.get(sym_key, missing_value)
+
+        if abs(z1 - missing_value) <= tol and abs(z2 - missing_value) <= tol:
+            z_avg = missing_value
+            status = 'missing'
+        elif abs(z1 - missing_value) <= tol:
+            z_avg = z2
+            status = 'single'
+        elif abs(z2 - missing_value) <= tol:
+            z_avg = z1
+            status = 'single'
+        else:
+            z_avg = (z1 + z2) / 2
+            status = 'average'
+
+        if keep_both:
+            rows.append((xr, yr, z_avg, status))
+            rows.append((-xr, -yr, z_avg, status))
+        else:
+            rows.append((xr, yr, z_avg, status))
+
+        processed.add(key)
+        processed.add(sym_key)
+
+    df_out = pd.DataFrame(rows, columns=['x', 'y', 'z', 'status'])
+    df_out.sort_values(by=['y', 'x'], ascending=[False, True], inplace=True)
+    df_out.reset_index(drop=True, inplace=True)
+    return df_out
+
+def resample_centered_grid(df, step, missing_value=-8.0):
+    x_min, x_max = df['x'].min(), df['x'].max()
+    y_min, y_max = df['y'].min(), df['y'].max()
+
+    num_x = int(round((x_max - x_min) / step))
+    num_y = int(round((y_max - y_min) / step))
+    x_centers = [round(x_min + step * i + step / 2, 4) for i in range(num_x)]
+    y_centers = [round(y_min + step * i + step / 2, 4) for i in range(num_y)]
+
+    rows = []
+    for yc in sorted(y_centers, reverse=True):
+        for xc in x_centers:
+            x_low = xc - step / 2
+            x_high = xc + step / 2
+            y_low = yc - step / 2
+            y_high = yc + step / 2
+
+            subset = df[
+                (df['x'] >= x_low) & (df['x'] < x_high + 1e-8) &
+                (df['y'] >= y_low) & (df['y'] < y_high + 1e-8)
+            ]
+            valid = subset[subset['z'] > missing_value + 1e-8]['z']
+            if len(valid) == 0:
+                z = missing_value
+                status = 'missing'
+            elif len(valid) == 1:
+                z = valid.iloc[0]
+                status = 'single'
+            else:
+                z = valid.mean()
+                status = 'average'
+            rows.append((xc, yc, z, status))
+
+    return pd.DataFrame(rows, columns=['x', 'y', 'z', 'status'])
+
+def format_coord_label(x, y):
+    def f(v):
+        v = int(round(v * 1000))
+        return f"p{abs(v):04}" if v >= 0 else f"m{abs(v):04}"
+    return f"{f(x)}{f(y)}"
+
+def make_unique_labels(labels):
+    counter = Counter()
+    unique_labels = []
+    for label in labels:
+        counter[label] += 1
+        if counter[label] == 1:
+            unique_labels.append(label)
+        else:
+            unique_labels.append(f"{label}_{counter[label]}")
+    return unique_labels
+
+def load_deltag_file(path):
+    if not path or not os.path.isfile(path):
+        print("No DeltaG CSV provided or file not found.")
+        return {}
+    df = pd.read_csv(path)
+    return dict(zip(df['ID'], df['DeltaGexp']))
+
+def build_matrix(file_dicts, deltag_map, output_name, coord_labels=None):
+    rows = []
+    for ID, zvals in file_dicts.items():
+        clean_ID = ID.replace("-TopSurface", "")
+        deltaG = deltag_map.get(clean_ID, "")
+        row = [clean_ID, deltaG] + zvals
+        rows.append(row)
+
+    if not rows:
+        print(f"Warning: no rows to write for {output_name}")
+        return
+
+    n_features = len(rows[0]) - 2
+    headers = ['ID', 'DeltaGexp'] + (coord_labels if coord_labels else [f'Vburvalue_{i+1}' for i in range(n_features)])
+    pd.DataFrame(rows, columns=headers).to_csv(output_name, index=False)
+    print(f"Final matrix saved to: {output_name}")
+
+def process_single_file(filepath, keep_both, steps, deltag_path, symm):
+    deltag_map = load_deltag_file(deltag_path) if deltag_path else {}
+
+    suffix = "resample_symmetrized" if keep_both else "resample_symmetrized"
+    matrix_dicts = {}
+    matrix_dicts_grid = {}
+    coord_labels_per_step = {}
+    coord_labels_per_step_grid = {}
+
+    print(f"Processing {filepath}...")
+    df = pd.read_csv(filepath, delim_whitespace=True, header=None, names=['x', 'y', 'z'])
+    ID = os.path.splitext(os.path.basename(filepath))[0]
+    dirname = os.getcwd()
+
+    for step in steps:
+        if step == 0.0:
+            if symm == "c1":
+                df_sym = symmetrize_c1(df.copy(), keep_both=keep_both)
+            else:  # "c2"
+                df_sym = symmetrize_c2(df.copy(), keep_both=keep_both)
+
+            df_sym.to_csv(os.path.join(dirname, f"{ID}_{suffix}_no_resample.dat"), header=False, sep=" ", index=False)
+            df_used = df_sym
+            # For the grid view at step==0, reuse sorted df_used when needed below
+        else:
+            df_resampled = resample_centered_grid(df, step=step)
+            if symm == "c1":
+                df_sym = symmetrize_c1(df_resampled, keep_both=keep_both)
+            else:
+                df_sym = symmetrize_c2(df_resampled, keep_both=keep_both)
+
+            df_sym.to_csv(os.path.join(dirname, f"{ID}_{suffix}_step_{str(step).replace('.', '_')}.dat"), header=False, sep=" ", index=False)
+
+            df_grid = df_sym.sort_values(by=['x', 'y'], ascending=[True, True]).reset_index(drop=True)
+          # df_grid.to_csv(os.path.join(dirname, f"{ID}_{suffix}_step_{str(step).replace('.', '_')}_grid.csv"), index=False)
+
+            df_used = df_sym
+            df_used_grid = df_grid
+
+        # Matrix content (unordered)
+        z_values = df_used['z'].tolist()
+        matrix_dicts.setdefault(step, {})[ID] = z_values
+
+        # Grid-ordered content
+        if step != 0.0:
+            z_values_grid = df_used_grid['z'].tolist()
+            coords_grid_vals = df_used_grid[['x', 'y']].values
+        else:
+            tmp_sorted = df_used.sort_values(by=['x', 'y'], ascending=[True, True]).reset_index(drop=True)
+            z_values_grid = tmp_sorted['z'].tolist()
+            coords_grid_vals = tmp_sorted[['x', 'y']].values
+
+        matrix_dicts_grid.setdefault(step, {})[ID] = z_values_grid
+
+        # Labels (unordered)
+        coords = list(zip(df_used['x'], df_used['y']))
+        raw_labels = [format_coord_label(x, y) for x, y in coords]
+        coord_labels_per_step[step] = make_unique_labels(raw_labels)
+
+        # Labels (grid-ordered)
+        raw_labels_grid = [format_coord_label(x, y) for x, y in coords_grid_vals]
+        coord_labels_per_step_grid[step] = make_unique_labels(raw_labels_grid)
+
+    for step in matrix_dicts:
+        suffix_step = "no_resample" if step == 0.0 else f"step_{str(step).replace('.', '_')}"
+        build_matrix(matrix_dicts[step], deltag_map, f"{ID}_matrix_{suffix}_{suffix_step}.csv", coord_labels_per_step.get(step))
+      # build_matrix(matrix_dicts_grid[step], deltag_map, f"matrix_{suffix}_{suffix_step}_grid.csv", coord_labels_per_step_grid.get(step))
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Symmetrize and resample a single TopSurface.dat file.\n"
+                    "Generates symmetrized CSVs and matrix CSVs.",
+        formatter_class=argparse.RawTextHelpFormatter
+    )
+
+    # Required
+    parser.add_argument('--map', type=str, required=True,
+                        help="Path to a single TopSurface.dat file to process.")
+    parser.add_argument('--symm', choices=['c1', 'c2'], required=True,
+                        help="c1: leave map points unchanged\n"
+                             "c2: symmetrize averaging z values for (x,y) and (-x,-y)")
+    parser.add_argument('--steps', required=True, nargs='+', type=float,
+                        help="Resampling steps to apply (e.g. 0.25 0.5 0.0).\n"
+                             "Use 0.0 to skip resampling and only symmetrize.")
+
+    # Optional
+    parser.add_argument('--keep', choices=['yes', 'no'], default='yes',
+                        help="yes: keep both (x, y) and (-x, -y) points.\n"
+                             "no: keep only one per pair.")
+    parser.add_argument('--deltag', type=str, default='',
+                        help="Optional path to DeltaG CSV file with 'ID,DeltaGexp' columns.")
+
+    args = parser.parse_args()
+    keep_both = args.keep == 'yes'
+
+    process_single_file(
+        filepath=args.map,
+        keep_both=keep_both,
+        steps=args.steps,
+        deltag_path=args.deltag,
+        symm=args.symm
+    )
+
