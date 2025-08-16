@@ -44,9 +44,8 @@ def readcontour(fname):
     z = zeros((d, d), float)
     grid_mesh = float((xmax - xmin) / (d - 1))
     print('Info:   ', 'Filename', sys.argv[1])
-    print('Info:   ', 'Map range and spacing ', xmin, xmax, grid_mesh)
+    print('Info:   ', 'Map range', xmin, xmax, grid_mesh)
     print('Info:   ', 'Number of points on x,y axes ', d)
-    print('Info:   ', 'Isocontour levels every ', sys.argv[2])
 
     # Setting grid mesh values here
     for i in range(0, d, 1):
@@ -65,13 +64,12 @@ def readcontour(fname):
 # Main program below
 
 # checking arguments are passed from command line
-if (len(sys.argv) < 3):
+if (len(sys.argv) < 2):
     print(' ')
-    sys.exit(' Usage: mappa.py surface-file.dat spacing')
+    sys.exit(' Usage: plot_heatmap.py surface-file.dat ')
 
 # Read z(x,y) file
 (cx, cy, cz, xmin, xmax) = readcontour(sys.argv[1])
-spacing = float(sys.argv[2])
 
 # -------- Heatmap with white below xmin --------
 plt.figure()
