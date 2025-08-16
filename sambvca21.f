@@ -507,7 +507,6 @@ c=========================================================
           y = +Radius  - Real(i-1)*BinSize
           do j = 1, NumPoints
             x = -Radius + Real(j-1)*BinSize
-            write(6,*)y,x
             zmin = Radius * 2.0
             zmax =-Radius * 2.0
             do k = 1, NumPoints
