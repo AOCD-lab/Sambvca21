@@ -83,6 +83,7 @@ c=========================================================================
       Integer :: IfOverlap                      ! if IfOverlap = 0 voxel is free. If = 1 voxel is buried
       Integer :: IndFrame                       ! index of the molecular frame currently calculated
       Integer :: ScanCube                       ! if sphere radius < 0 then consider a cube, not a sphere
+      Integer :: NumPoints_z                    ! # of grid points to be scanned: radius / binsize * 2 + 1
       Integer :: NumPoints                      ! # of grid points to be scanned: radius / binsize * 2 + 1
       Integer :: NumInside                      ! # of points inside the sphere
       Integer :: nAtomDel                       ! # of atoms to be deleted
@@ -114,6 +115,8 @@ c=========================================================================
       Real*8 :: VburTot                         ! total volume
       Real*8 :: zmin                            ! bottom z surface
       Real*8 :: zmax                            ! top z surface
+      Real*8 :: zmin_store                      ! bottom z to be scanned
+      Real*8 :: zmax_store                      ! top z to be scanned
       Real*8 :: Volume                          ! volume of the sphere
       Real*8 :: space                           ! grid point size 
       Real*8 :: notch                           ! starting point of the plot
@@ -415,43 +418,73 @@ c assign atom radius from the data base
           endif
         enddo
 
+c find minimum z coordinate
+        zmin = Coord(3)
+        do l = 1, natoms
+          m = (l-1)*3
+          temp = Coord(m+3) - sqrt(AtomRadius2(l)) - BinSize
+          if (temp .lt. zmin) zmin = temp
+        enddo
+
+        temp = aint(zmin)
+        if (zmin .lt. temp) then
+           zmin = temp - 1.d0
+        else
+           zmin = temp
+        endif
+
+c find maximum z coordinate
+        zmax = Coord(3)
+        do l = 1, natoms
+          m = (l-1)*3
+          temp = Coord(m+3) + sqrt(AtomRadius2(l)) + BinSize
+          if (temp .gt. zmax) zmax = temp
+        enddo
+
+        temp = aint(zmax)
+        if (zmax .gt. temp) then
+           zmax = temp + 1.d0
+        else
+           zmax = temp
+        endif
+
 c remove atoms far away from the sphere
-        Cutoff = AtomTypeRadius(1)
-        do i = 2, nTypes
-          if(Cutoff.lt.AtomTypeRadius(i))Cutoff=AtomTypeRadius(i)
-        enddo
-        Cutoff = (Cutoff + Radius + 1.0)**2
+cgg     Cutoff = AtomTypeRadius(1)
+cgg     do i = 2, nTypes
+cgg       if(Cutoff.lt.AtomTypeRadius(i))Cutoff=AtomTypeRadius(i)
+cgg     enddo
+cgg     Cutoff = (Cutoff + Radius + 1.0)**2
 
-        Allocate (Coord_new(natoms*3))
-        Allocate (AtomRadius2_new(natoms))
-        Allocate (AtomNames_new(natoms))
-        natoms_new = 0
-        do i = 1, natoms
-          j = (i-1)*3
-          dist = Coord(j+1)**2 + Coord(j+2)**2 + Coord(j+3)**2
-          if(dist.le.Cutoff)then
-            natoms_new = natoms_new + 1
-            k = (natoms_new - 1)*3
-            Coord_new(k+1) = Coord(j+1)
-            Coord_new(k+2) = Coord(j+2)
-            Coord_new(k+3) = Coord(j+3)
-            AtomNames_new(natoms_new) = AtomNames(i)
-            AtomRadius2_new(natoms_new) = AtomRadius2(i)
-          endif
-        enddo
-        natoms = natoms_new
-        do i = 1, natoms
-          j = (i-1)*3
-          Coord(j+1) = Coord_new(j+1)
-          Coord(j+2) = Coord_new(j+2)
-          Coord(j+3) = Coord_new(j+3)
-          AtomNames(i) = AtomNames_new(i)
-          AtomRadius2(i) = AtomRadius2_new(i)
-        enddo
-
-        Deallocate(Coord_new)
-        Deallocate(AtomNames_new)
-        Deallocate(AtomRadius2_new)
+cgg     Allocate (Coord_new(natoms*3))
+cgg     Allocate (AtomRadius2_new(natoms))
+cgg     Allocate (AtomNames_new(natoms))
+cgg     natoms_new = 0
+cgg     do i = 1, natoms
+cgg       j = (i-1)*3
+cgg       dist = Coord(j+1)**2 + Coord(j+2)**2 + Coord(j+3)**2
+cgg       if(dist.le.Cutoff)then
+cgg         natoms_new = natoms_new + 1
+cgg         k = (natoms_new - 1)*3
+cgg         Coord_new(k+1) = Coord(j+1)
+cgg         Coord_new(k+2) = Coord(j+2)
+cgg         Coord_new(k+3) = Coord(j+3)
+cgg         AtomNames_new(natoms_new) = AtomNames(i)
+cgg         AtomRadius2_new(natoms_new) = AtomRadius2(i)
+cgg       endif
+cgg     enddo
+cgg     natoms = natoms_new
+cgg     do i = 1, natoms
+cgg       j = (i-1)*3
+cgg       Coord(j+1) = Coord_new(j+1)
+cgg       Coord(j+2) = Coord_new(j+2)
+cgg       Coord(j+3) = Coord_new(j+3)
+cgg       AtomNames(i) = AtomNames_new(i)
+cgg       AtomRadius2(i) = AtomRadius2_new(i)
+cgg     enddo
+cgg
+cgg     Deallocate(Coord_new)
+cgg     Deallocate(AtomNames_new)
+cgg     Deallocate(AtomRadius2_new)
 
 c initialize some parameters for the Vbur calculation
 c increase marginally square radius of sphere (Radius2) to capture
@@ -503,20 +536,29 @@ c images
 c=========================================================
         NumPoints = int(2.0 * Radius / BinSize + 1.0)
 
+        zmin_store = -Radius
+        zmax_store = +Radius
+        if (zmin.lt.-Radius) zmin_store = zmin
+        if (zmax.gt.+Radius) zmax_store = zmax
+
+        NumPoints_z  = int((zmax_store-zmin_store) / BinSize + 1.0)
+
+        write(6,*)' zmin zmax N_z ',zmin_store,zmax_store,NumPoints_z
+
+c       NumPoints_z  = NumPoints
+        
+
         do i= 1, NumPoints
           y = +Radius  - Real(i-1)*BinSize
           do j = 1, NumPoints
             x = -Radius + Real(j-1)*BinSize
-            zmin = Radius * 2.0
-            zmax =-Radius * 2.0
-            do k = 1, NumPoints
+            zmin = +999.9
+            zmax = -999.9
+            do k = 1, NumPoints_z
               z = -Radius  + Real(k-1)*BinSize
               IfOverlap = 0
-              dist2 = x*x + y*y + z*z
-              if(dist2.le.Radius2 .or. ScanCube.eq.1)then
-                NumInside = NumInside + 1
-                Wgth = 1.0
-                if (abs(dist2-Radius2).lt.0.01*BinSize) Wgth = 0.5
+
+
                 do l = 1, natoms
                   m = (l-1)*3
                   dx = x - Coord(m+1)
@@ -525,6 +567,15 @@ c=========================================================
                   dist2 = dx*dx + dy*dy + dz*dz
                   if(dist2.lt.AtomRadius2(l)) IfOverlap = 1
                 enddo
+
+
+                      if(z.ge.-Radius .and. z.le.+Radius)then
+              dist2 = x*x + y*y + z*z
+              if(dist2.le.Radius2 .or. ScanCube.eq.1)then
+                NumInside = NumInside + 1
+                Wgth = 1.0
+                if (abs(dist2-Radius2).lt.0.01*BinSize) Wgth = 0.5
+
 c
 c no overlap of grid point with any atom 
                 if(IfOverlap.eq.0)then
@@ -542,6 +593,7 @@ c grid point overlapping with at least one atom
 
                 VburTot = VburTot + BinSize3*Wgth
               endif
+                              endif
 
 c tune bottom and top surface
               if (IfOverlap.eq.1)then
