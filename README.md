@@ -26,4 +26,16 @@ Luigi Cavallo - 2025
 **Output file 1    :**    myfile-TopSurface_resample_symmetrized_step_N_NN.dat downsampled and symmetrized input file <br>
 **Output file 2    :**    myfile-TopSurface_resample_symmetrized_step_N_NN.csv 1D flattened surface <br>
  <br>
+
+**Source file       :**   matrix-1-radius.f <br>
+**Information       :**   Fortran code to read a 2 radii matrix file and rewrite a 1 radius matrix file<br>
+**Information       :**   To be compiled as gfortran -o matrix-1-radius.x matrix-1-radius.f <br>
+**Input file        :**   Input file is standard myfile.matrix <br>
+**Executed as       :**   matrix-1-radius.x  < 2radii.matrix   > 1radius.matrix<br>
+ <br>
+
+
+
+
+
 **Examples         :**   Directory with examples. Check the README file there for further info
