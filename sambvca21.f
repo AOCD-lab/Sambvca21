@@ -34,6 +34,13 @@ c                                                                         c
 c For the GNU General Public License, see http://www.gnu.org/licenses/    c
 c                                                                         c
 c=========================================================================c
+c 16-09-25 Added input variation to prevent molecule reorientation, which c       
+c          remains fixed as in input. To activate input -1 as number of   c
+c          atoms defining sphere center.                                  c
+c 16-08-25 Added input variation to analyze cubes rather than spheres     c
+c          To activate input negative sphere radius, which will be half   c
+c          cube side                                                      c
+c=========================================================================c
 
       IMPLICIT NONE
 
@@ -81,6 +88,7 @@ c=========================================================================
       Integer :: DoMap                          ! if DoMap: =0 do not print surfaces. If = 1 print surfaces
       Integer :: AlignZ                         ! if AlignZ =0, align the molecule along -z; if =1 along +z
       Integer :: IfOverlap                      ! if IfOverlap = 0 voxel is free. If = 1 voxel is buried
+      Integer :: NoCenter                       ! if = -1 do not reorient the molecule, still read input
       Integer :: IndFrame                       ! index of the molecular frame currently calculated
       Integer :: ScanCube                       ! if sphere radius < 0 then consider a cube, not a sphere
       Integer :: NumPoints_z                    ! # of grid points to be scanned: radius / binsize * 2 + 1
@@ -233,7 +241,9 @@ c atoms to be deleted
       endif
 
 c atoms defining the geometry center
+      NoCenter = 0
       read(101,*)nAtomGC
+      if (nAtomGC.eq.-1) NoCenter = 1
       Allocate (IndGC(nAtomGC))
       read(101,*)IndGC(1:nAtomGC)
 
@@ -268,9 +278,19 @@ c if remove Hydrogen atoms
 
 c align molecule to +z or -z
       read(101,*)AlignZ
+      if (AlignZ.ne.0 .and. AlignZ.ne.1) then
+         write(200, *)' Wrong parameter. Orientation must be',
+     x                ' 0/1 along -z/+z). From input = ',AlignZ
+         stop
+      endif
 
 c if make map
       read(101,*)DoMap
+      if (DoMap.ne.0 .and. DoMap.ne.1) then
+         write(200, *)' Wrong parameter. Either do or do not write',
+     x                ' map files 0/1 ). From input = ',DoMap
+         stop
+      endif
 
 c read atom types and radius
       read(101,*)nTypes
@@ -282,7 +302,7 @@ c read atom types and radius
         read(101,*)AtomTypeName(i),AtomTypeRadius(i)
       enddo
 
-      CALL CheckControlParameters(nAtomDel, IndDel, 
+      CALL CheckControlParameters(nAtomDel, IndDel, NoCenter,
      x     nAtomGC, IndGC, nAtom_z, IndAxis, nAtom_xz, Indxz, 
      x     Radius, Disp, BinSize, RemoveH, DoMap, 
      x     AlignZ, nTypes, AtomTypeName, AtomTypeRadius)
@@ -308,11 +328,11 @@ c read coordinates of atoms composing the molecule to be analyzed
  
 c write input coordinates in output:
         write(200,*)
-        write(200,'(a39,16x,i5)')
+        write(200,'(a40,15x,i5)')
      x  "Checking: No. of atoms of input frame :", natoms
 
         write(200,*)
-        write(200,'(a38)')"Checking: Coordinates of input frame :"
+        write(200,'(a39)')"Checking: Coordinates of input frame :"
         do i = 1, natoms
           j = (i-1)*3
           write(200,'(a4,1x,3f10.5)')AtomNames(i),
@@ -322,58 +342,60 @@ c write input coordinates in output:
 c=========================================================================
 c defining the cartesian axis
 c=========================================================================
-        Call ConstructXYZ(GC, natoms, Coord, IndGC, nAtomGC, z_GC,
-     x                    nAtom_z, IndAxis, nAtom_xz, Indxz,
-     x                    x_axis, y_axis, z_axis, x_temp_GC)
+        if (NoCenter.eq.0) then
+           Call ConstructXYZ(GC, natoms, Coord, IndGC, nAtomGC, z_GC,
+     x                       nAtom_z, IndAxis, nAtom_xz, Indxz,
+     x                       x_axis, y_axis, z_axis, x_temp_GC)
 
 c align z_axis to 0 0 1
-        bench_vec(1) = 0.d0
-        bench_vec(2) = 0.d0
-        if(AlignZ.eq.0)bench_vec(3) = -1.d0
-        if(AlignZ.eq.1)bench_vec(3) = +1.d0
-        initial(1) = z_axis(1)
-        initial(2) = z_axis(2)
-        initial(3) = z_axis(3)
-
-        call ali(Coord, bench_vec, initial,
-     x           x_axis, y_axis, z_axis, GC, natoms)
-
-c renew your axis
-        Call ConstructXYZ(GC, natoms, Coord, IndGC, nAtomGC, z_GC,
-     x                    nAtom_z, IndAxis, nAtom_xz, Indxz,
-     x                    x_axis, y_axis, z_axis, x_temp_GC)
-
-c align x_axis to 1 0 0 with fixed z
-        bench_vec(1) = 1.d0
-        bench_vec(2) = 0.d0
-        bench_vec(3) = 0.d0
-        initial(1) = x_axis(1)
-        initial(2) = x_axis(2)
-        initial(3) = 0.d0
-        call ali(Coord, bench_vec, initial,
-     x           x_axis, y_axis, z_axis, GC, natoms)
-
-c renew your GC
-        Call ConstructXYZ(GC, natoms, Coord, IndGC, nAtomGC, z_GC,
-     x                    nAtom_z, IndAxis, nAtom_xz, Indxz,
-     x                    x_axis, y_axis, z_axis, x_temp_GC)
-
-        Call MoveParticle(Coord, GC, natoms)
+           bench_vec(1) = 0.d0
+           bench_vec(2) = 0.d0
+           if(AlignZ.eq.0)bench_vec(3) = -1.d0
+           if(AlignZ.eq.1)bench_vec(3) = +1.d0
+           initial(1) = z_axis(1)
+           initial(2) = z_axis(2)
+           initial(3) = z_axis(3)
+           
+           call ali(Coord, bench_vec, initial,
+     x              x_axis, y_axis, z_axis, GC, natoms)
+           
+c renew    your axis
+           Call ConstructXYZ(GC, natoms, Coord, IndGC, nAtomGC, z_GC,
+     x                       nAtom_z, IndAxis, nAtom_xz, Indxz,
+     x                       x_axis, y_axis, z_axis, x_temp_GC)
+           
+c align    x_axis to 1 0 0 with fixed z
+           bench_vec(1) = 1.d0
+           bench_vec(2) = 0.d0
+           bench_vec(3) = 0.d0
+           initial(1) = x_axis(1)
+           initial(2) = x_axis(2)
+           initial(3) = 0.d0
+           call ali(Coord, bench_vec, initial,
+     x              x_axis, y_axis, z_axis, GC, natoms)
+           
+c renew    your GC
+           Call ConstructXYZ(GC, natoms, Coord, IndGC, nAtomGC, z_GC,
+     x                       nAtom_z, IndAxis, nAtom_xz, Indxz,
+     x                       x_axis, y_axis, z_axis, x_temp_GC)
+           
+           Call MoveParticle(Coord, GC, natoms)
 
 c move the particle if Disp > 0.0
-        if(Disp.ne.0.0)then
-          GC(1) = 0.d0
-          GC(2) = 0.d0
-          if(AlignZ.eq.0)GC(3) = +Disp
-          if(AlignZ.eq.1)GC(3) = -Disp
-          Call MoveParticle(Coord, GC, natoms)
-        endif
-
-c write XYZ rotated frame in output and -rotated.xyz file
-        write(200,*)
-        write(200,'(a39)')"Results: Coordinates of rotated frame :"
-        call WriteXYZ(200,natoms,Title,Atomnames,Coord)
-        call WriteXYZ(207,natoms,Title,Atomnames,Coord)
+            if(Disp.ne.0.0)then
+              GC(1) = 0.d0
+              GC(2) = 0.d0
+              if(AlignZ.eq.0)GC(3) = +Disp
+              if(AlignZ.eq.1)GC(3) = -Disp
+              Call MoveParticle(Coord, GC, natoms)
+            endif
+         endif
+         
+c write  XYZ rotated frame in output and -rotated.xyz file
+         write(200,*)
+         write(200,'(a39)')"Results: Coordinates of rotated frame :"
+         call WriteXYZ(200,natoms,Title,Atomnames,Coord)
+         call WriteXYZ(207,natoms,Title,Atomnames,Coord)
 
 c remove deleted atoms "AS" and H atoms,  if requested, by working array
         if (nAtomDel.gt.0)then
@@ -726,7 +748,7 @@ c=======================================================================
 c=======================================================================
 c This subroutine is to check if the input file is correctly read      c
 c=======================================================================
-      subroutine CheckControlParameters(nAtomDel, IndDel, 
+      subroutine CheckControlParameters(nAtomDel, IndDel, NoCenter,
      x nAtomGC, IndGC, nAtom_z, IndAxis, nAtom_xz, Indxz, Radius,
      x Disp, BinSize, RemoveH, DoMap, 
      x AlignZ, nTypes, AtomTypeName, AtomTypeRadius)
@@ -740,6 +762,7 @@ c=======================================================================
       Integer :: RemoveH                        ! parameter to determine if remove H: =1, remove; =2, not
       Integer :: DoMap                          ! if make map: =1, make; =2, not
       Integer :: AlignZ                         ! =1, align the molecule along z; =2 align the molecule along -z
+      Integer :: NoCenter                       ! if = -1 do not reorient the molecule, still read input
 
       Integer :: IndDel(nAtomDel)               ! index of the atoms to be deleted
 
@@ -762,53 +785,61 @@ c=======================================================================
 
 c End variables definition
 
-      write(200,'(a39,16x,i5)')
+      write(200,'(a40,15x,i5)')
      x"Checking: No. of atoms to be removed : ", nAtomDel
       if (nAtomDel.gt.0) then 
-         write(200,'(a32)')
+         write(200,'(a33)')
      x   "Checking: Atoms to be removed : "
          write(200,'(10i5)')IndDel(1:nAtomDel)
       endif
 
-      write(200,'(a51,4x,i5)')
-     x"Checking: No. of atoms defining the sphere center :", nAtomGC 
-      write(200,'(a44,11x,i5)')
-     x"Checking: Atoms defining the sphere center :"
-      write(200,'(10i5)')IndGC(1:nAtomGC)
+      if (NoCenter.eq.1) then
+         write(200,'(a45,5x,i5)')
+     x   "Checking: No reorientation of the molecule :", NoCenter
+      else
+         write(200,'(a52,3x,i5)')
+     x   "Checking: No. of atoms defining the sphere center :", nAtomGC 
+         write(200,'(a45,10x,i5)')
+     x   "Checking: Atoms defining the sphere center :"
+         write(200,'(10i5)')IndGC(1:nAtomGC)
 
-      write(200,'(a45,10x,i5)')
-     x"Checking : No. of atoms defining the Z-axis :", nAtom_z
-      write(200,'(10i5)')IndAxis(1:nAtom_z)
+         write(200,'(a46,9x,i5)')
+     x   "Checking : No. of atoms defining the Z-axis :", nAtom_z
+         write(200,'(10i5)')IndAxis(1:nAtom_z)
 
-      write(200,'(a47,8x,i5)')
-     x"Checking : No. of atoms defining the XZ-plane :", nAtom_xz 
-      write(200,'(10i5)')Indxz(1:nAtom_xz)
+         write(200,'(a48,7x,i5)')
+     x   "Checking : No. of atoms defining the XZ-plane :", nAtom_xz 
+         write(200,'(10i5)')Indxz(1:nAtom_xz)
 
-      if (AlignZ.eq.1) write(200,*)
-     x   "Checking: Molecule will be aligned along the Z+ direction"
-      if (AlignZ.eq.2) write(200,*)
-     x   "Checking: Molecule will be aligned along the Z- direction"
+      endif
 
-      write(200,'(a32,8x,f8.3)')
+      write(200,'(a32,18x,f10.3)')
      x"Checking: Vbur sphere radius : ", Radius
 
-      write(200,'(a38,2x,f8.3)')
+      write(200,'(a38,12x,f10.3)')
      x"Checking: Displacement from origin : " , Disp
 
-      write(200,'(a23,17x,f8.3)')
+      write(200,'(a23,27x,f10.3)')
      x"Checking: Bin width : ", BinSize
 
-      if (RemoveH.eq.1) write(200,*)
-     x   "Checking: Removing H atoms"
-      if (RemoveH.ne.1) write(200,*)
-     x "Checking: Keeping H atoms"
+      if (RemoveH.eq.1) write(200, '(a29,19x,i12)')
+     x   "Checking: Removing H atoms :", RemoveH
+      if (RemoveH.ne.1) write(200, '(a29,19x,i12)')
+     x   "Checking: Keeping H atoms : ", RemoveH
 
-      if (DoMap.eq.1) write(200,*)
-     x   "Checking: Outputting steric map"
-      if (DoMap.ne.1) write(200,*)
-     x   "Checking: No steric map in the output"
+      if (NoCenter.eq.0) then
+         if (AlignZ.eq.0) write(200,'(a40,15x,i5)')
+     x      "Checking: Molecule aligned along Z- :  ", AlignZ
+         if (AlignZ.eq.1) write(200,'(a40,15x,i5)')
+     x      "Checking: Molecule aligned along Z+ :  ", AlignZ
+      endif
 
-      write(200,*)
+      if (DoMap.eq.1) write(200, '(a40,15x,i5)')
+     x   "Checking: Outputting steric map :      ",DoMap
+      if (DoMap.ne.1) write(200, '(a40,15x,i8)') 
+     x   "Checking: No steric map in the output :",DoMap
+
+      write(200, '(a47,8x,i5)')
      x"Checking: No. of atom types in your database :", nTypes
       write(200,*)
      x"Checking: Atom labels and radius in the database :"
